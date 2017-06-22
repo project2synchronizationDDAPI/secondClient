@@ -14,8 +14,9 @@ import java.util.HashMap;
  */
 public class Table {
     private String tableName;
-    //the key is 
+
     private ArrayList<Field> fields=new ArrayList<>();
+    
     private ArrayList<ForgeinKeyInformation> forgeinKeys=new ArrayList<>();
 
     @Override

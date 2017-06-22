@@ -22,15 +22,26 @@ public class DatabaseSyncProject2 {
     public static void main(String[] args) {
         // TODO code application logic here
         SqlLocalConnection local=new SqlLocalConnection();
-        String tableName="names";
+        String tableName="car";
        /* local.doInsert(tableName, "ali");
         local.doInsert(tableName, "saeed");
         local.doInsert(tableName, "manar");
        */
-        local.doDelete(tableName,50);
-        local.doDelete(tableName,51);
+        //local.getInsertedElementFromTable(tableName);
+        /*local.doDelete(tableName, 5);
+        local.doDelete(tableName, 25);
+        local.doDelete(tableName, 15);
+        */
+        //local.doDelete(tableName, 18);
+        //local.doInsert(tableName, "kia");
+        //local.doInsert(tableName, "bmw");
+        /*
+        local.doInsert("door", "2");
+        local.doInsert("door", "1");
+        */
+        //local.doDelete("door", 2);
         Synchronizer synchronizer=new Synchronizer();
-        synchronizer.Sync(Config.DATABASE_NAME,Config.USER_NAME,Config.PASSWORD,local);
+        synchronizer.Sync(Config.DATABASE_NAME_SECOND_CLIENT,Config.USER_NAME,Config.PASSWORD,local);
     }
     
 }

@@ -36,13 +36,12 @@ public class SqlLocalConnection extends DbConnection{
     }
     //insert row to table 
     @Override
-    public void doInsert(String tableName,String name) {
+    public void doInsert(String tableName,String values) {
         try {            
             Date date = new Date();
-            SimpleDateFormat ft = new SimpleDateFormat("yyyy-MM-dd kk:mm:ss");            
-            PreparedStatement stmt = con.prepareStatement("INSERT INTO "+tableName+" VALUES ('" + name + "',"+enuRecordState.INSERTED.ordinal()+",convert(datetime,'"+ft.format(date)+"'),NULL)" );
+            SimpleDateFormat ft = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss"); 
+            PreparedStatement stmt = con.prepareStatement("INSERT INTO "+tableName+" VALUES ('" + values + "',"+enuRecordState.INSERTED.ordinal()+",convert(datetime,'"+ft.format(date)+"'),NULL)" );
             stmt.executeUpdate();
-            
             System.out.println("inserted");
         } catch (SQLException e) {
             e.printStackTrace();
@@ -72,7 +71,7 @@ public class SqlLocalConnection extends DbConnection{
     @Override
     public ResultSet getUpdatedElementFromTable(String tableName){
         try {
-            return getElementFromTableDebendOnState(tableName, enuRecordState.INSERTED);
+            return getElementFromTableDebendOnState(tableName, enuRecordState.UPDATED);
         } catch (SQLException e) {
             e.printStackTrace();
             return null;
@@ -89,6 +88,32 @@ public class SqlLocalConnection extends DbConnection{
             e.printStackTrace();
             return null;
         }
+    }
+    public int getServerIdByIdValue(String tableName,int id){
+        try {
+            Statement s = con.createStatement();
+            ResultSet rs = s.executeQuery("SELECT server_id FROM "+tableName+" WHERE id = "+id);
+            if (rs!=null) {
+                rs.next();
+                return rs.getInt(1);
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return -1;
+    }
+    public int getIdByServerIdValue(String tableName,int serverId){
+        try {
+            Statement s = con.createStatement();
+            ResultSet rs = s.executeQuery("SELECT id FROM "+tableName+" WHERE server_id = "+serverId);
+            if (rs!=null) {
+                rs.next();
+                return rs.getInt(1);
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return -1;
     }
     //get all row has syncState = some value 
     private ResultSet getElementFromTableDebendOnState(String tableName,enuRecordState state)throws SQLException{
