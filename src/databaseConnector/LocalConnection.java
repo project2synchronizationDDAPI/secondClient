@@ -5,6 +5,7 @@
  */
 package databaseConnector;
 
+import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -20,45 +21,26 @@ import java.util.logging.Logger;
 import java.util.stream.Collectors;
 import util.Config;
 
-/**
- *
- * @author Bcc
- */
-public class SqlLocalConnection extends DbConnection{
-    public SqlLocalConnection() {
-        try {
-            Class.forName("com.microsoft.sqlserver.jdbc.SQLServerDriver");
-            String connectionUrl = "jdbc:sqlserver://localhost:1433;databaseName="+Config.DATABASE_NAME+";integratedSecurity=true;";
-            con = DriverManager.getConnection(connectionUrl);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
+
+
+public class LocalConnection{
+    DbConnection conn;
+    public LocalConnection(DbConnection dbConn){
+    conn=dbConn;
+}
+    
     //insert row to table 
-    @Override
     public void doInsert(String tableName,String values) {
-        try {            
             Date date = new Date();
             SimpleDateFormat ft = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss"); 
-            PreparedStatement stmt = con.prepareStatement("INSERT INTO "+tableName+" VALUES ('" + values + "',"+enuRecordState.INSERTED.ordinal()+",convert(datetime,'"+ft.format(date)+"'),NULL)" );
-            stmt.executeUpdate();
+            conn.insert(tableName,values, enuRecordState.INSERTED.ordinal()+"", ft.format(date));
             System.out.println("inserted");
-        } catch (SQLException e) {
-            e.printStackTrace();
         }
-    }
     // insert more than one row
     public void insertRecordValues(String tableName,String values){
-        try {
-            System.out.println("INSERT INTO "+tableName+" VALUES "+values);
-            PreparedStatement stmt = con.prepareStatement("INSERT INTO "+tableName+" VALUES "+values);
-            stmt.executeUpdate();          
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
+        conn.insert(tableName, values);
      }
     //get all inserted row has syncState = Inserted
-    @Override
     public ResultSet getInsertedElementFromTable(String tableName){
         try {
             return getElementFromTableDebendOnState(tableName, enuRecordState.INSERTED);
@@ -68,7 +50,6 @@ public class SqlLocalConnection extends DbConnection{
         }
     }
     //get all updated row has syncState = updated
-    @Override
     public ResultSet getUpdatedElementFromTable(String tableName){
         try {
             return getElementFromTableDebendOnState(tableName, enuRecordState.UPDATED);
@@ -78,21 +59,12 @@ public class SqlLocalConnection extends DbConnection{
         }
     }
     //get all Deleted row has syncState = Deleted
-    @Override
     public ResultSet getDeletedElementFromTable(String tableName){
-        try {
-            Statement s = con.createStatement();
-            ResultSet rs = s.executeQuery("SELECT server_id FROM "+tableName+" WHERE syncState="+enuRecordState.DELETED.ordinal());
-            return rs;
-        } catch (SQLException e) {
-            e.printStackTrace();
-            return null;
-        }
+        return conn.select("server_id", tableName, conn.creteria.equals("syncState", enuRecordState.DELETED.ordinal()+""));
     }
     public int getServerIdByIdValue(String tableName,int id){
         try {
-            Statement s = con.createStatement();
-            ResultSet rs = s.executeQuery("SELECT server_id FROM "+tableName+" WHERE id = "+id);
+             ResultSet rs =conn.select("server_id", tableName, conn.creteria.equals("id", id+""));
             if (rs!=null) {
                 rs.next();
                 return rs.getInt(1);
@@ -101,11 +73,10 @@ public class SqlLocalConnection extends DbConnection{
             e.printStackTrace();
         }
         return -1;
-    }
+  }
     public int getIdByServerIdValue(String tableName,int serverId){
+        ResultSet rs =conn.select("id", tableName, conn.creteria.equals("server_id", serverId+""));
         try {
-            Statement s = con.createStatement();
-            ResultSet rs = s.executeQuery("SELECT id FROM "+tableName+" WHERE server_id = "+serverId);
             if (rs!=null) {
                 rs.next();
                 return rs.getInt(1);
@@ -117,18 +88,11 @@ public class SqlLocalConnection extends DbConnection{
     }
     //get all row has syncState = some value 
     private ResultSet getElementFromTableDebendOnState(String tableName,enuRecordState state)throws SQLException{
-        Statement s = con.createStatement();
-        ResultSet rs = s.executeQuery("SELECT * FROM "+tableName+" WHERE syncState="+state.ordinal());
-        return rs;
+        return conn.select("*", tableName, conn.creteria.equals("syncState", state.ordinal()+""));
     }
     //change syncState for all rows from oldState to newState
     private void changeSyncState(String tableName,enuRecordState newState,enuRecordState oldState){ 
-        try {
-            PreparedStatement stmt = con.prepareStatement("UPDATE "+tableName+" SET syncState = "+newState.ordinal()+" WHERE syncState = "+oldState.ordinal());
-            stmt.executeUpdate();
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+        conn.Update(tableName, "syncState", newState.ordinal()+"", conn.creteria.equals("syncState", oldState.ordinal()+""));
     }
     
     //change syncState for all rows from inserted to sync
@@ -141,15 +105,10 @@ public class SqlLocalConnection extends DbConnection{
     }
     //delete all rows depend on syncState
     private void deleteAllRecordDependOnState(String tableName,enuRecordState state){
-        try {
-            PreparedStatement stmt = con.prepareStatement("DELETE FROM "+tableName+" WHERE syncState = "+state.ordinal());
-            stmt.executeUpdate();
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
+        conn.delete(tableName, conn.creteria.equals("syncState",state.ordinal()+""));
     }
     // i don't use this method خلو بيلزم لأنو غريب هالكود 
-    public void insertFromResultSet(String tableName,ResultSet resultSet){
+    /*public void insertFromResultSet(String tableName,ResultSet resultSet){
         try {
             ResultSetMetaData meta = resultSet.getMetaData();
 
@@ -179,36 +138,26 @@ public class SqlLocalConnection extends DbConnection{
             e.printStackTrace();
         }
     }
+    */
     // we use this method to block the identity constraint and then insert all the rows that we get from the server
     public void insertForSync(String tableName,String metaData , String values){
         if (values !="") {
-            try {
-                System.out.println("SET IDENTITY_INSERT names ON \n" +
+            System.out.println("SET IDENTITY_INSERT names ON \n" +
                         "INSERT INTO "+tableName+" "+metaData+" VALUES "+values+" \n" +
                         "SET IDENTITY_INSERT names OFF");
-                PreparedStatement stmt = con.prepareStatement("SET IDENTITY_INSERT names ON \n" +
-                        "INSERT INTO "+tableName+" "+metaData+" VALUES "+values+" \n" +
-                        " SET IDENTITY_INSERT names OFF");
-                stmt.executeUpdate();
-            } catch (SQLException e) {
-                e.printStackTrace();
-            }
+            
+            conn.setIDENTITY_INSERTNames("ON");
+            conn.insert(tableName, metaData, values);
+            conn.setIDENTITY_INSERTNames("OFF");
         }
     }
     //this method return the auto increment id to any value i want
     public void resetIdToValue(String tableName,int id){
-        try {
-            PreparedStatement stmt = con.prepareStatement("DBCC CHECKIDENT ('"+tableName+"', RESEED, "+id+")");
-            stmt.executeUpdate();
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
+        conn.autoIncrementIDENT(tableName, id);
     }
     
     // this method for delete
-    @Override
     public void doDelete(String tableName,int id){
-        
         /*
         1-get flag value for the row
         2-depend of the flag do what i have to do
@@ -239,8 +188,9 @@ public class SqlLocalConnection extends DbConnection{
     private int getFlagValue(String tableName,int id){
         int result=-1;
         try {
-            Statement s = con.createStatement();
-            ResultSet rs = s.executeQuery("SELECT TOP 1 syncState FROM "+tableName+" WHERE id="+id);
+            ResultSet rs;
+            rs=conn.selectTop(1, "syncState", tableName, conn.creteria.equals("id", id+""));
+            //may rs=0
             while (rs.next()) {                
                 result=rs.getInt(1);
             }
@@ -251,22 +201,12 @@ public class SqlLocalConnection extends DbConnection{
     }
     //update flag value for row
     private void updateFlagValue(String tableName,int id,enuRecordState newState){
-       try {
-            PreparedStatement stmt = con.prepareStatement("UPDATE "+tableName+" SET syncState = "+newState.ordinal()+" WHERE id = "+id);
-            stmt.executeUpdate();
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+       conn.Update(tableName, "syncState", newState.ordinal()+"", conn.creteria.equals("id",id+""));
     }
     //delete record depend on id
     private void deleteRecord(String tableName,int id){
-       try {
-            PreparedStatement stmt = con.prepareStatement("DELETE FROM "+tableName+" WHERE id = "+id);
-            stmt.executeUpdate();
-        } catch (Exception e) {
-            e.printStackTrace();
+       conn.delete(tableName, conn.creteria.equals("id",id+""));
         }
-    }
     //delete record depend on id
     public void doUpdate(String tableName , String name , int id){
         /*
@@ -298,54 +238,36 @@ public class SqlLocalConnection extends DbConnection{
     }
     //update record name
     private void updateRecord(String tableName , String name , int id){
-        try {
-            PreparedStatement stmt = con.prepareStatement("UPDATE "+tableName+" SET name = '"+name+"' WHERE id = "+id);
-            stmt.executeUpdate();
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+        conn.Update(tableName, "name", name, conn.creteria.equals("id",id+""));
     }
     //delete all record has ids using in operator
     public void deleteRecordsFromValues(String tableName,String idsValues){
-       try {
-           System.out.println("DELETE FROM "+tableName+" WHERE server_id IN ("+idsValues+")");
-            PreparedStatement stmt = con.prepareStatement("DELETE FROM "+tableName+" WHERE server_id IN ("+idsValues+")");
-            stmt.executeUpdate();
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+       conn.delete(tableName, conn.creteria.IN("server_id",idsValues));
+       System.out.println("DELETE FROM "+tableName+" WHERE server_id IN ("+idsValues+")");
     }
     //get max Id from table 
     //we using it to get last inserted id here
     public int getLastIdFromTable(String tableName){
         int id=0;
         try {
-            Statement s = con.createStatement();
-            ResultSet rs = s.executeQuery("SELECT MAX(id) FROM "+tableName);
+            ResultSet rs = conn.selectMax("id", tableName);
             while (rs.next()) {                
                 id=rs.getInt(1);
             }
-        } catch (SQLException e) {
-            
+        } catch (SQLException e) {            
             e.printStackTrace();
         }
         return id;
     } 
     public void updateServerId(String tableName,int id,int serverId){
-        
-        try {
-            PreparedStatement stmt = con.prepareStatement("UPDATE "+tableName+" SET syncState = "+enuRecordState.SYNCHRONIZED.ordinal()+",server_id="+serverId+" WHERE id = "+id);
-            stmt.executeUpdate();
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
+        conn.Update(tableName, "syncState", enuRecordState.SYNCHRONIZED.ordinal()+"", conn.creteria.equals("id",id+""));
+        conn.Update(tableName, "server_id", serverId+"", conn.creteria.equals("id",id+""));
     }
     //*********************************  OLD FUNCTIONS *************************************
     public String getTableNameByTableId(int tableId) throws SQLException{
-        Statement s1 = con.createStatement();
-
-        ResultSet rs = s1.executeQuery("SELECT TOP 1 name FROM SYSOBJECTS WHERE xtype='U' AND id="+tableId);
-
+        String c1=conn.creteria.equals("xtype", "'U'");
+        String c2=conn.creteria.equals("id", tableId+"");        
+        ResultSet rs =conn.selectTop(1,"name", "SYSOBJECTS", conn.creteria.AND(c1, c2));
         String tableName="";
         while (rs.next()) {
             tableName = rs.getString(1);
@@ -366,9 +288,4 @@ public class SqlLocalConnection extends DbConnection{
         return 0;
     }
     */
-    
-    @Override
-    public void doSelect(String tableName) {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
-    }
 }

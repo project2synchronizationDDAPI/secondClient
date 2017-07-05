@@ -9,7 +9,7 @@ import configrationfileitems.Field;
 import configrationfileitems.ForgeinKeyInformation;
 import configrationfileitems.Table;
 import databaseConnector.DbConnection;
-import databaseConnector.SqlLocalConnection;
+import databaseConnector.LocalConnection;
 import databaseConnector.enuRecordState;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
@@ -32,7 +32,7 @@ public class Synchronizer {
     //the sync method will connect to the server and send the data for open connection
     //then if the connection succeed then will get all the data from the client and send it
     //then we will get all non synchronized data and procces it on my database
-    public void Sync(String databaseName, String username,String password, SqlLocalConnection localConnection){
+    public void Sync(String databaseName, String username,String password, LocalConnection localConnection){
         // check connection for the user
         JSONObject userInfo= userInfoToJSON(databaseName, username, password);
         InsertedElementsJSONSender sender=new InsertedElementsJSONSender();
@@ -205,7 +205,7 @@ public class Synchronizer {
         return metaDataJSON;
     }
     
-    private JSONArray InsertedRecordToJSON(ResultSet resultSet,ArrayList<Field> fields,ArrayList<ForgeinKeyInformation> forgeinKeyInformations,SqlLocalConnection localConnection){
+    private JSONArray InsertedRecordToJSON(ResultSet resultSet,ArrayList<Field> fields,ArrayList<ForgeinKeyInformation> forgeinKeyInformations,LocalConnection localConnection){
         JSONArray result=new JSONArray();
         try {
             while(resultSet.next()) {
@@ -296,7 +296,7 @@ public class Synchronizer {
         System.out.println(recordsQueryValues);
         return recordsQueryValues;
     }
-    private String insertedRecordsJSONParser(String insertedRecordsJSONString,Table table,SqlLocalConnection localConnection){
+    private String insertedRecordsJSONParser(String insertedRecordsJSONString,Table table,LocalConnection localConnection){
         JSONArray records=new JSONArray(insertedRecordsJSONString);
         String recordsQueryValues="";
         int length=records.length();
@@ -312,7 +312,7 @@ public class Synchronizer {
         System.out.println(recordsQueryValues);
         return recordsQueryValues;
     }
-    private String convertRecordString(JSONObject recordJSON,Table table,SqlLocalConnection localConnection){
+    private String convertRecordString(JSONObject recordJSON,Table table,LocalConnection localConnection){
         String result="";
         String serverId="";
         ArrayList<Field> fields=table.getFields();

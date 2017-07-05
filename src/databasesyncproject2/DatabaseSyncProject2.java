@@ -5,7 +5,9 @@
  */
 package databasesyncproject2;
 
-import databaseConnector.SqlLocalConnection;
+import databaseConnector.DbConnection;
+import databaseConnector.LocalConnection;
+import databaseConnector.SQLConnection;
 import synchronizer.Synchronizer;
 import util.Config;
 
@@ -21,7 +23,7 @@ public class DatabaseSyncProject2 {
      */
     public static void main(String[] args) {
         // TODO code application logic here
-        SqlLocalConnection local=new SqlLocalConnection();
+        LocalConnection local=new LocalConnection(new SQLConnection());
         String tableName="car";
        /* local.doInsert(tableName, "ali");
         local.doInsert(tableName, "saeed");
